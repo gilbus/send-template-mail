@@ -1,0 +1,3 @@
+--smtp-server=localhost
+--smtp-port=8025
+--test-smtp

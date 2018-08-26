@@ -1,0 +1,3 @@
+Hallo ${Vorname} ${Nachname},
+
+Dies ist eine Testmail an eine ${Geschl}e Person.
