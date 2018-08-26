@@ -1,3 +1,4 @@
 --smtp-server=localhost
 --smtp-port=8025
---test-smtp
+--no-auth
+--no-tls

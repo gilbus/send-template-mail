@@ -132,9 +132,8 @@ def main() -> int:
     smtp_args_parser = main_parser.add_argument_group(
         "SMTP Arguments",
         """If you would like to test without actually sending any mails set this values
-        to localhost:8025 and and flags to ignore any failures. Then start a development
-        server via `python3 -m smtpd -n -c DebuggingServer -u`. Any user and password
-        combination is valid.""",
+        to localhost:8025 and proceed without authentication and encryption. Then start
+        a development server via `python3 -m smtpd -n -c DebuggingServer -u`.""",
     )
     smtp_args_parser.add_argument(
         "--smtp-server", type=str, default="localhost", help="The SMTP server to use"
@@ -152,9 +151,14 @@ def main() -> int:
         help="The username used to connect to the smtp server",
     )
     smtp_args_parser.add_argument(
-        "--test-smtp",
+        "--no-auth",
         action="store_true",
-        help="Ignore STARTTLS connection and authentication failures",
+        help="Do not ask for a smtp password and skip authentication attempt",
+    )
+    smtp_args_parser.add_argument(
+        "--no-tls",
+        action="store_true",
+        help="Do not try to switch to an encrypted connection.",
     )
     verbosity_args_group = main_parser.add_argument_group(
         "Verbosity Arguments",
@@ -251,35 +255,35 @@ def main() -> int:
         )
         return 1
 
-    try:
-        smtp_conn.starttls()
-    except SMTPException as e:
-        if args.test_smtp:
-            logging.warning("Ignoring failed attempt to use encrypted connection.")
-        else:
+    if not args.no_tls:
+        try:
+            smtp_conn.starttls()
+        except SMTPException as e:
             logging.error(
                 "Could not switch to STARTTLS connection. Aborting. See `help` "
                 "to ignore such errors."
             )
             return 1
+    else:
+        logging.info("Skipping switch to encrypted connection as requested.")
     logging.debug(f"Created connection to server {args.smtp_server}")
 
-    try:
-        smtp_pass = getpass(prompt="Please enter your smtp password: ")
-    except EOFError:
-        logging.error("Received EOF. Cannot continue without password. Exiting")
-        return 2
-    try:
-        smtp_conn.login(args.smtp_user, smtp_pass)
-    except (SMTPException, SMTPAuthenticationError) as e:
-        if args.test_smtp:
-            logging.warning("Ignoring failed attempt to authenticate correctly.")
-        else:
+    if not args.no_auth:
+        try:
+            smtp_pass = getpass(prompt="Please enter your smtp password: ")
+        except EOFError:
+            logging.error("Received EOF. Cannot continue without password. Exiting")
+            return 2
+        try:
+            smtp_conn.login(args.smtp_user, smtp_pass)
+        except (SMTPException, SMTPAuthenticationError) as e:
             logging.error(
                 f"Could not login with given given password for user {args.smtp_user}. "
                 "Maybe wrong password?"
             )
             return 1
+    else:
+        logging.info("Skipping authentication as requested.")
     logging.debug(f"Successfully logged in as {args.smtp_user}@{args.smtp_server}")
 
     for receiver in csv_file:
