@@ -18,7 +18,15 @@ from smtplib import SMTP, SMTPException, SMTPAuthenticationError
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
-from typing import Union, Set
+
+try:
+    from typing import Union, Set
+except ImportError:
+    # In case the lowest supported version (3.4) is used but the python(3)-typing
+    # package is not installed
+    # Not necessary for runtime and hopefully development takes place with a current
+    # python version ;)
+    pass
 from os.path import sep, abspath, realpath
 from re import match
 from sys import stderr, argv
@@ -206,9 +214,10 @@ def main() -> int:
     if args.hash_file:
         try:
             if args.hash_file.exists():
-                for line in args.hash_file.read_text().split("\n"):
-                    if not line or line.strip().startswith("#"):
-                        continue
+                with args.hash_file.open() as file:
+                    for line in file.readlines():
+                        if not line or line.strip().startswith("#"):
+                            continue
                     already_sent_hashes.add(line.strip())
                 logging.info(
                     "Processed {} entries from {!r} to skip".format(
@@ -217,11 +226,12 @@ def main() -> int:
                 )
 
             else:
-                args.hash_file.write_text(
-                    "# Created {}. See `{} --help` for more information\n".format(
-                        now(), argv[0]
+                with args.hash_file.open("w") as file:
+                    file.write(
+                        "# Created {}. See `{} --help` for more information\n".format(
+                            now(), argv[0]
+                        )
                     )
-                )
                 logging.debug(
                     "Created non existent hash-file {!r}".format(args.hash_file.name)
                 )
