@@ -1,5 +1,8 @@
 # Manual for `send_template_mail.py`
 
+> Currently the script requires Python 3.6 or to newer due to the usage of f-strings.
+> Porting to Version 3.5 should be quite easy, just open an issue if it affects you.
+
 This script enables you to send personalized mails to multiple persons, taking the data 
 from a single CSV (comma separated value) file and another template mail. Its primary 
 use case is to send the ESI (`ErstSemesterInformant`) to the new first-years. Usually 
