@@ -51,7 +51,9 @@ def main() -> int:
     main_parser = ArgumentParser(
         description=__doc__,
         formatter_class=ArgumentDefaultsHelpFormatter,
-        epilog=f"{__author__} {__license__}, remember `@arg_file` (see description above)",
+        epilog="{} {}, remember `@arg_file` (see description above)".format(
+            __author__, __license__
+        ),
         fromfile_prefix_chars="@",
     )
 
@@ -196,9 +198,9 @@ def main() -> int:
         setup_logging(logging.ERROR)
     else:
         setup_logging(logging.INFO)
-    logging.debug(f"Received command line args {args}")
+    logging.debug("Received command line args {}".format(args))
 
-    already_sent_hashes: Set[str] = set()
+    already_sent_hashes = set()  # type: Set[str]
 
     # let's see whether any hash file is given and create it if necessary
     if args.hash_file:
@@ -209,18 +211,25 @@ def main() -> int:
                         continue
                     already_sent_hashes.add(line.strip())
                 logging.info(
-                    f"Processed {len(already_sent_hashes)} entries from "
-                    f"{args.hash_file.name!r} to skip"
+                    "Processed {} entries from {!r} to skip".format(
+                        len(already_sent_hashes), args.hash_file.name
+                    )
                 )
 
             else:
                 args.hash_file.write_text(
-                    f"# Created {now()}. See `{argv[0]} --help` for more information\n"
+                    "# Created {}. See `{} --help` for more information\n".format(
+                        now(), argv[0]
+                    )
                 )
-                logging.debug(f"Created non existent hash-file {args.hash_file.name!r}")
+                logging.debug(
+                    "Created non existent hash-file {!r}".format(args.hash_file.name)
+                )
         except PermissionError:
             logging.error(
-                f"Wrong permissions for hash-file {args.hash_file.name!r}. Aborting"
+                "Wrong permissions for hash-file {!r}. Aborting".format(
+                    args.hash_file.name
+                )
             )
             return 1
     else:
@@ -233,25 +242,30 @@ def main() -> int:
         csv_file = DictReader(args.csv_file)
     except csv_error as e:
         logging.error(
-            f"Could not read template from {args.csv_file.name}. The following error "
-            f"occurred {e}"
+            "Could not read template from {}. The following error occurred {}".format(
+                args.csv_file.name, e
+            )
         )
         return 1
 
     logging.debug(
-        f"Parsed CSV file {args.csv_file.name!r} with headers {csv_file.fieldnames}"
+        "Parsed CSV file {!r} with headers {}".format(
+            args.csv_file.name, csv_file.fieldnames
+        )
     )
 
     template = Template(args.template_file.read())
 
-    logging.debug(f"Constructed template from {args.template_file.name!r}.")
+    logging.debug("Constructed template from {!r}.".format(args.template_file.name))
 
     try:
         smtp_conn = SMTP(args.smtp_server, args.smtp_port)
     except ConnectionRefusedError:
         logging.error(
-            f"Could not connect to server '{args.smtp_server}:{args.smtp_port}'. "
-            "Please check its address and port number."
+            "Could not connect to server '{}:{}'. "
+            "Please check its address and port number.".format(
+                args.smtp_server, args.smtp_port
+            )
         )
         return 1
 
@@ -266,7 +280,7 @@ def main() -> int:
             return 1
     else:
         logging.info("Skipping switch to encrypted connection as requested.")
-    logging.debug(f"Created connection to server {args.smtp_server}")
+    logging.debug("Created connection to server {}".format(args.smtp_server))
 
     if not args.no_auth:
         try:
@@ -278,22 +292,25 @@ def main() -> int:
             smtp_conn.login(args.smtp_user, smtp_pass)
         except (SMTPException, SMTPAuthenticationError) as e:
             logging.error(
-                f"Could not login with given given password for user {args.smtp_user}. "
-                "Maybe wrong password?"
+                "Could not login with given given password for user {}. "
+                "Maybe wrong password?".format(args.smtp_user)
             )
             return 1
     else:
         logging.info("Skipping authentication as requested.")
-    logging.debug(f"Successfully logged in as {args.smtp_user}@{args.smtp_server}")
+    logging.debug(
+        "Successfully logged in as {}@{}".format(args.smtp_user, args.smtp_server)
+    )
 
     for receiver in csv_file:
-        logging.debug(f"Processing entry: {receiver}")
+        logging.debug("Processing entry: {}".format(receiver))
         try:
-            entry_identifier = f"[{receiver[args.email_field]}]"  # type: str
+            entry_identifier = "[{}]".format(receiver[args.email_field])
         except KeyError:
             logging.error(
-                f"Entry {receiver} contains no address field {args.email_field}. "
-                "Aborting."
+                "Entry {} contains no address field {}. Aborting.".format(
+                    receiver, args.email_field
+                )
             )
             return 1
         # let's check whether any filter are given and skip entry if so
@@ -301,28 +318,30 @@ def main() -> int:
         for field_to_check, regex in args.filter or []:
             try:
                 if not match(regex, receiver[field_to_check]):
-                    logging.info(f"{entry_identifier}, failed filter {regex!r}")
+                    logging.info(
+                        "{}, failed filter {!r}".format(entry_identifier, regex)
+                    )
                     skip_entry = True
             except KeyError:
                 logging.error(
-                    f"Cannot apply filter {regex!r} to nonexistent field "
-                    f"{field_to_check!r}, Aborting."
+                    "Cannot apply filter {!r} to nonexistent field {!r}, Aborting.".format(
+                        regex, field_to_check
+                    )
                 )
                 return 1
         if skip_entry:
-            logging.warning(f"Skipping {entry_identifier} due to filters.")
+            logging.warning("Skipping {} due to filters.".format(entry_identifier))
             continue
-        logging.debug(f"Constructing mail for {entry_identifier}")
-        msg: Union[MIMEMultipart, MIMEText]
+        logging.debug("Constructing mail for {}".format(entry_identifier))
         try:
             body = template.substitute(receiver)
         except KeyError as e:
             logging.error(
-                f"Template contains an unsubstituted Placeholder: {e}. Aborting"
+                "Template contains an unsubstituted Placeholder: {}. Aborting".format(e)
             )
             return 1
         except ValueError as e:
-            logging.error(f"The template contains an error: {e!r}. Aborting")
+            logging.error("The template contains an error: {!r}. Aborting".format(e))
             return 1
         if args.attachment:
             logging.debug("Processing attachments")
@@ -330,16 +349,16 @@ def main() -> int:
             msg.attach(MIMEText(body))
             for attachment in args.attachment:
                 attachment_name = attachment.name.split(sep)[-1]
-                logging.debug(f"Processing attachment {attachment_name}")
+                logging.debug("Processing attachment {}".format(attachment_name))
                 part = MIMEApplication(attachment.read(), Name=attachment_name)
-                part[
-                    "Content-Disposition"
-                ] = f'attachment; filename="{attachment_name}"'
+                part["Content-Disposition"] = 'attachment; filename="{}"'.format(
+                    attachment_name
+                )
                 msg.attach(part)
                 attachment.seek(0)
 
         else:
-            msg = MIMEText(body)
+            msg = MIMEText(body)  # type: ignore
         msg["From"] = args.from_
         if args.reply_to:
             msg["Reply-To"] = args.reply_to
@@ -349,10 +368,12 @@ def main() -> int:
             mail_address = mail_address.strip()
             if md5(mail_address) in already_sent_hashes:
                 logging.info(
-                    f"Skipped {mail_address} since it is present in the hash-file"
+                    "Skipped {} since it is present in the hash-file".format(
+                        mail_address
+                    )
                 )
                 continue
-            logging.debug(f"Sending mail to {mail_address!r}")
+            logging.debug("Sending mail to {!r}".format(mail_address))
 
             try:
                 smtp_conn.sendmail(
@@ -367,12 +388,14 @@ def main() -> int:
             if args.hash_file:
                 with args.hash_file.open("a") as file:
                     if first_hash_to_add:
-                        file.write(f"# Entries from {now()}\n")
+                        file.write("# Entries from {}\n".format(now()))
                         first_hash_to_add = False
-                    file.write(f"{md5(mail_address)}\n")
-                logging.debug(f"Added md5-hash of {mail_address!r} to hash-file")
+                    file.write("{}\n".format(md5(mail_address)))
+                logging.debug(
+                    "Added md5-hash of {!r} to hash-file".format(mail_address)
+                )
 
-            logging.info(f"Sent mail to: {mail_address!r}")
+            logging.info("Sent mail to: {!r}".format(mail_address))
     smtp_conn.quit()
 
     return 0
@@ -383,3 +406,4 @@ if __name__ == "__main__":
         exit(main())
     except KeyboardInterrupt:
         print("Received Ctrl+c. Good Bye")
+# vim: textwidth=88
