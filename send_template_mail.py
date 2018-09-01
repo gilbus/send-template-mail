@@ -218,7 +218,8 @@ def main() -> int:
                     for line in file.readlines():
                         if not line or line.strip().startswith("#"):
                             continue
-                    already_sent_hashes.add(line.strip())
+                        else:
+                            already_sent_hashes.add(line.strip())
                 logging.info(
                     "Processed {} entries from {!r} to skip".format(
                         len(already_sent_hashes), args.hash_file.name
