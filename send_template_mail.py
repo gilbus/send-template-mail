@@ -313,6 +313,7 @@ def main() -> int:
         "Successfully logged in as {}@{}".format(args.smtp_user, args.smtp_server)
     )
 
+    first_hash_to_add = True
     for receiver in csv_file:
         logging.debug("Processing entry: {}".format(receiver))
         try:
@@ -374,7 +375,6 @@ def main() -> int:
         if args.reply_to:
             msg["Reply-To"] = args.reply_to
         msg["Subject"] = args.subject
-        first_hash_to_add = True
         for mail_address in receiver[args.email_field].split(args.email_separator):
             mail_address = mail_address.strip()
             if md5(mail_address) in already_sent_hashes:
