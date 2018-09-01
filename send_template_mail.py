@@ -307,11 +307,11 @@ def main() -> int:
                 "Maybe wrong password?".format(args.smtp_user)
             )
             return 1
+        logging.debug(
+            "Successfully logged in as {}@{}".format(args.smtp_user, args.smtp_server)
+        )
     else:
         logging.info("Skipping authentication as requested.")
-    logging.debug(
-        "Successfully logged in as {}@{}".format(args.smtp_user, args.smtp_server)
-    )
 
     first_hash_to_add = True
     for receiver in csv_file:
