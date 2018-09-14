@@ -87,6 +87,11 @@ def main() -> int:
         address if its hash is inside the file. Lines starting with a `#` are ignored
         and used to write timestamps.""",
     )
+    main_parser.add_argument(
+        "--no-update",
+        action="store_true",
+        help="Do not add any hash entries to the `hash-file`",
+    )
     mail_args_parser = main_parser.add_argument_group(
         "Email Arguments",
         """Use this arguments to change the header information of the mail, e.g. set
@@ -396,7 +401,7 @@ def main() -> int:
                     "appended. Aborting"
                 )
                 return 1
-            if args.hash_file:
+            if args.hash_file and not args.no_update:
                 with args.hash_file.open("a") as file:
                     if first_hash_to_add:
                         file.write("# Entries from {}\n".format(now()))
