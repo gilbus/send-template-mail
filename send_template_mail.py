@@ -382,6 +382,7 @@ def main() -> int:
         msg["Subject"] = args.subject
         for mail_address in receiver[args.email_field].split(args.email_separator):
             mail_address = mail_address.strip()
+            msg["To"] = mail_address
             if md5(mail_address) in already_sent_hashes:
                 logging.info(
                     "Skipped {} since it is present in the hash-file".format(
