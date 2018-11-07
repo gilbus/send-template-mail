@@ -18,6 +18,7 @@ from smtplib import SMTP, SMTPException, SMTPAuthenticationError
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
+from email.header import Header
 
 try:
     from typing import Union, Set
@@ -47,6 +48,13 @@ _date_format = "%Y-%m-%d %H:%M:%S"
 _print_traceback_env_var = "SEND_TEMPLATE_MAIL_TRACEBACK"
 
 _print_traceback = getenv(_print_traceback_env_var, None)
+
+
+def utf8_header(s: str) -> Header:
+    """
+    Return utf-8 encoded header
+    """
+    return Header(s, "utf-8")
 
 
 def print_traceback_if_requested() -> None:
@@ -113,9 +121,13 @@ def main() -> int:
     )
     mail_args_parser.add_argument(
         "-f",
-        "--from_",
-        default=getuser(),
-        help="The `From:` to show inside the mail. Supports `Name <address>` format.",
+        "--from",
+        nargs=2,
+        metavar=("Sender", "From-Mail"),
+        required=True,
+        dest="from_",
+        help="""The `From:` to show inside the mail. First part could be your name and
+        gets encoded properly. Second part should be your mail-address, can be empty.""",
     )
     mail_args_parser.add_argument(
         "-r", "--reply-to", type=str, help="Reply-To address to set"
@@ -390,10 +402,11 @@ def main() -> int:
 
         else:
             msg = MIMEText(body)  # type: ignore
-        msg["From"] = args.from_
+        msg["From"] = utf8_header(args.from_[0])
+        msg["From"].append(" <{}>".format(args.from_[1]), charset="ascii")
         if args.reply_to:
             msg["Reply-To"] = args.reply_to
-        msg["Subject"] = args.subject
+        msg["Subject"] = utf8_header(args.subject)
         for mail_address in receiver[args.email_field].split(args.email_separator):
             mail_address = mail_address.strip()
             msg["To"] = mail_address
