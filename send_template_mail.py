@@ -27,6 +27,7 @@ except ImportError:
     # Not necessary for runtime and hopefully development takes place with a current
     # python version ;)
     pass
+from os import getenv
 from os.path import sep, abspath, realpath
 from re import match
 from sys import stderr, argv
@@ -42,6 +43,19 @@ __license__ = "GPL v3"
 _logging_format = "%(asctime)s:%(levelname)s:%(message)s"
 # see https://docs.python.org/3/library/time.html?highlight=strftime#time.strftime
 _date_format = "%Y-%m-%d %H:%M:%S"
+
+_print_traceback_env_var = "SEND_TEMPLATE_MAIL_TRACEBACK"
+
+_print_traceback = getenv(_print_traceback_env_var, None)
+
+
+def print_traceback_if_requested() -> None:
+    if _print_traceback:
+        logging.exception("Printing traceback as requested")
+    else:
+        logging.info(
+            "Set environment variable %r to see traceback", _print_traceback_env_var
+        )
 
 
 def now() -> str:
@@ -396,11 +410,9 @@ def main() -> int:
                 smtp_conn.sendmail(
                     args.smtp_user, mail_address.strip(), msg.as_string()
                 )
-            except SMTPException:
-                logging.exception(
-                    "The following error occurred during sending, stacktrace is "
-                    "appended. Aborting"
-                )
+            except SMTPException as e:
+                logging.critical("Got unexpected SMTP/Send exception %r. Aborting", e)
+                print_traceback_if_requested()
                 return 1
             if args.hash_file and not args.no_update:
                 with args.hash_file.open("a") as file:
@@ -422,5 +434,8 @@ if __name__ == "__main__":
     try:
         exit(main())
     except KeyboardInterrupt:
-        print("Received Ctrl+c. Good Bye")
+        logging.info("Received Ctrl+c. Good Bye")
+    except Exception as e:
+        logging.critical("Finished with unexpected exception %r.", e)
+        print_traceback_if_requested()
 # vim: textwidth=88
